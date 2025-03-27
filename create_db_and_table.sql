@@ -1,14 +1,14 @@
 -- Create the database if it doesn't exist
 USE master
 GO
-IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'AutoDBFirstName')
+IF NOT EXISTS (SELECT * FROM sys.databases WHERE name = 'Autotest_IM_27March')
 BEGIN
-    CREATE DATABASE AutoDBFirstName;
+    CREATE DATABASE Autotest_IM_27March;
 END
 GO
 
 -- Switch to the database
-USE AutoDBFirstName;
+USE Autotest_IM_27March;
 GO
 
 -- Create the user table if it doesn't exist
