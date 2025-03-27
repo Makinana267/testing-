@@ -1,4 +1,4 @@
-USE AutoDBFirstName;
+USE Autotest_IM_27March;
 GO
 
 -- Create or replace the stored procedure
