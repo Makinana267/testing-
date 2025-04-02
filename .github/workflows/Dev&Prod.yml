@@ -11,6 +11,10 @@ jobs:
       sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
       sql_user: ${{ secrets.DEV_SQL_USER }}
       sql_password: ${{ secrets.DEV_SQL_PASSWORD }}
+    secrets:  # Explicitly pass secrets to the reusable workflow
+      DEV_SQL_SERVER_HOST: ${{ secrets.DEV_SQL_SERVER_HOST }}
+      DEV_SQL_USER: ${{ secrets.DEV_SQL_USER }}
+      DEV_SQL_PASSWORD: ${{ secrets.DEV_SQL_PASSWORD }}
 
   deploy-prod:
     needs: deploy-dev  # Runs after Dev deployment
@@ -20,3 +24,7 @@ jobs:
       sql_server_host: ${{ secrets.PROD_SQL_SERVER_HOST }}
       sql_user: ${{ secrets.PROD_SQL_USER }}
       sql_password: ${{ secrets.PROD_SQL_PASSWORD }}
+    secrets:  # Explicitly pass secrets to the reusable workflow
+      PROD_SQL_SERVER_HOST: ${{ secrets.PROD_SQL_SERVER_HOST }}
+      PROD_SQL_USER: ${{ secrets.PROD_SQL_USER }}
+      PROD_SQL_PASSWORD: ${{ secrets.PROD_SQL_PASSWORD }}
