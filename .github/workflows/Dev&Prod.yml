@@ -8,8 +8,10 @@ jobs:
     runs-on: ubuntu-latest
     environment: Dev  # Development environment
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3  # Ensure repository is checked out first
       - name: Deploy SQL to Dev
-        uses: ./.github/actions/testing  # Reference the custom action
+        uses: ./.github/actions/deploy-sql  # Reference the custom action
         with:
           environment: Dev
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
@@ -23,8 +25,10 @@ jobs:
     needs: deploy-dev  # Runs after Dev deployment
     environment: Prod  # Production environment
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3  # Ensure repository is checked out first
       - name: Deploy SQL to Prod
-        uses: ./.github/actions/testing   # Reference the custom action
+        uses: ./.github/actions/deploy-sql  # Reference the custom action
         with:
           environment: Prod
           sql_server_host: ${{ secrets.PROD_SQL_SERVER_HOST }}
