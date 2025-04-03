@@ -5,7 +5,7 @@ on:
 
 jobs:
   deploy-dev:
-    uses: ./.github/workflows/deploy-sql.yml  # Call the reusable workflow
+    uses: ./.github/actions/testing # Call the reusable workflow
     with:
       environment: Dev
       sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
