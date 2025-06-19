@@ -5,11 +5,11 @@ on:
 
 jobs:
   deploy-ssis:
-    runs-on: [self-hosted, windows]
+    runs-on: self-hosted  # Use your self-hosted Windows runner
 
     env:
-      SQL_SERVER: ${{ secrets.DEV_SQL_SERVER_HOST }}
-      SQL_PORT: '1433'  # <-- set this if using default SQL Server port
+      SQL_SERVER: ${{ secrets.SQL_SERVER }}
+      SQL_PORT: ${{ secrets.SQL_PORT }}
       SQL_USERNAME: ${{ secrets.DEV_SQL_USER }}
       SQL_PASSWORD: ${{ secrets.DEV_SQL_PASSWORD }}
       SSIS_ISPAC_PATH: ssis/TimesheetETL.ispac
@@ -17,46 +17,51 @@ jobs:
       SSIS_PROJECT_NAME: TimesheetETL
 
     steps:
-      - name:  Checkout Repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name:  Install SQL Server PowerShell Modules
-        run: |
-          Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
-          Install-Module -Name SqlServer -Force -Scope CurrentUser
+      - name: Deploy SSIS Package
         shell: powershell
-
-      - name:  Deploy SSIS Package
         run: |
-          Import-Module SqlServer
+          Import-Module SqlServer -Force
+
           Add-Type -AssemblyName "Microsoft.SqlServer.Management.IntegrationServices"
 
           $server = "${{ env.SQL_SERVER }}"
           $port = "${{ env.SQL_PORT }}"
           $user = "${{ env.SQL_USERNAME }}"
           $pass = "${{ env.SQL_PASSWORD }}"
-          $project = "${{ env.SSIS_PROJECT_NAME }}"
           $folder = "${{ env.SSIS_FOLDER_NAME }}"
+          $project = "${{ env.SSIS_PROJECT_NAME }}"
           $ispac = "${{ github.workspace }}\${{ env.SSIS_ISPAC_PATH }}"
 
-          $connString = "Data Source=$server,$port;Initial Catalog=master;User ID=$user;Password=$pass;TrustServerCertificate=True;"
-          $sqlConn = New-Object System.Data.SqlClient.SqlConnection($connString)
+          $connStr = "Data Source=$server,$port;Initial Catalog=master;User ID=$user;Password=$pass;TrustServerCertificate=True;"
+          $sqlConn = New-Object System.Data.SqlClient.SqlConnection($connStr)
           $ssis = New-Object Microsoft.SqlServer.Management.IntegrationServices.IntegrationServices($sqlConn)
-          $catalog = $ssis.Catalogs["SSISDB"]
 
+          $catalog = $ssis.Catalogs["SSISDB"]
           if (-not $catalog) {
-            Write-Error " SSISDB catalog not found!"
+            Write-Error "SSISDB not found!"
             exit 1
           }
 
-          $existingFolder = $catalog.Folders[$folder]
-          if (-not $existingFolder) {
-            $existingFolder = New-Object Microsoft.SqlServer.Management.IntegrationServices.CatalogFolder($catalog, $folder, "Auto-created folder")
-            $existingFolder.Create()
+          $folderObj = $catalog.Folders[$folder]
+          if (-not $folderObj) {
+            $folderObj = New-Object Microsoft.SqlServer.Management.IntegrationServices.CatalogFolder($catalog, $folder, "Auto-created folder")
+            $folderObj.Create()
           }
 
           $projectBytes = [System.IO.File]::ReadAllBytes($ispac)
-          $existingFolder.DeployProject($project, $projectBytes)
+          $folderObj.DeployProject($project, $projectBytes)
+          Write-Host "SSIS Deployment completed."
 
-          Write-Host " SSIS Project '$project' successfully deployed to folder '$folder'."
+      - name: Deploy SQL Agent Job
         shell: powershell
+        run: |
+          $server = "${{ env.SQL_SERVER }}"
+          $port = "${{ env.SQL_PORT }}"
+          $user = "${{ env.SQL_USERNAME }}"
+          $pass = "${{ env.SQL_PASSWORD }}"
+          $script = "${{ github.workspace }}\sql\create_agent_job.sql"
+
+          sqlcmd -S "$server,$port" -U "$user" -P "$pass" -d msdb -i "$script" -b
