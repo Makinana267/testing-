@@ -7,26 +7,26 @@ jobs:
   deploy-ssis:
     runs-on: windows-latest
 
-    env: Dev
-      SQL_SERVER: ${{ secrets.SQL_SERVER }}
-      SQL_PORT: ${{ secrets.SQL_PORT }}
-      SQL_USERNAME: ${{ secrets.SQL_USERNAME }}
-      SQL_PASSWORD: ${{ secrets.SQL_PASSWORD }}
+    env:
+      SQL_SERVER: ${{ secrets.DEV_SQL_SERVER_HOST }}
+      SQL_PORT: '1433'  # <-- set this if using default SQL Server port
+      SQL_USERNAME: ${{ secrets.DEV_SQL_USER }}
+      SQL_PASSWORD: ${{ secrets.DEV_SQL_PASSWORD }}
       SSIS_ISPAC_PATH: ssis/TimesheetETL.ispac
       SSIS_FOLDER_NAME: TimesheetETL
       SSIS_PROJECT_NAME: TimesheetETL
 
     steps:
-      - name: Checkout repository
+      - name:  Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Install SQL Server PowerShell Modules
+      - name:  Install SQL Server PowerShell Modules
         run: |
           Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
           Install-Module -Name SqlServer -Force -Scope CurrentUser
         shell: powershell
 
-      - name: Deploy SSIS Package
+      - name:  Deploy SSIS Package
         run: |
           Import-Module SqlServer
           Add-Type -AssemblyName "Microsoft.SqlServer.Management.IntegrationServices"
@@ -45,17 +45,18 @@ jobs:
           $catalog = $ssis.Catalogs["SSISDB"]
 
           if (-not $catalog) {
-            Write-Error "SSISDB catalog not found!"
+            Write-Error " SSISDB catalog not found!"
             exit 1
           }
 
           $existingFolder = $catalog.Folders[$folder]
           if (-not $existingFolder) {
-            $existingFolder = New-Object Microsoft.SqlServer.Management.IntegrationServices.CatalogFolder($catalog, $folder, "Auto-created")
+            $existingFolder = New-Object Microsoft.SqlServer.Management.IntegrationServices.CatalogFolder($catalog, $folder, "Auto-created folder")
             $existingFolder.Create()
           }
 
           $projectBytes = [System.IO.File]::ReadAllBytes($ispac)
           $existingFolder.DeployProject($project, $projectBytes)
-          Write-Host " Deployment completed"
+
+          Write-Host " SSIS Project '$project' successfully deployed to folder '$folder'."
         shell: powershell
