@@ -5,7 +5,7 @@ on:
 
 jobs:
   deploy-ssis:
-    runs-on: windows-latest
+    runs-on: [self-hosted, windows]
 
     env:
       SQL_SERVER: ${{ secrets.DEV_SQL_SERVER_HOST }}
