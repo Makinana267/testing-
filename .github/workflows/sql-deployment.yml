@@ -29,8 +29,8 @@ jobs:
 
           $server = "${{ env.SQL_SERVER }}"
           $port = "${{ env.SQL_PORT }}"
-          $user = "${{ env.SQL_USERNAME }}"
-          $pass = "${{ env.SQL_PASSWORD }}"
+          $user = "${{ env.DEV_SQL_USER  }}"
+          $pass = "${{ env.DEV_SQL_PASSWORD }}"
           $folder = "${{ env.SSIS_FOLDER_NAME }}"
           $project = "${{ env.SSIS_PROJECT_NAME }}"
           $ispac = "${{ github.workspace }}\${{ env.SSIS_ISPAC_PATH }}"
@@ -60,8 +60,8 @@ jobs:
         run: |
           $server = "${{ env.SQL_SERVER }}"
           $port = "${{ env.SQL_PORT }}"
-          $user = "${{ env.SQL_USERNAME }}"
-          $pass = "${{ env.SQL_PASSWORD }}"
+          $user = "${{ env.DEV_SQL_USER }}"
+          $pass = "${{ env.DEV_SQL_PASSWORD }}"
           $script = "${{ github.workspace }}\sql\create_agent_job.sql"
 
           sqlcmd -S "$server,$port" -U "$user" -P "$pass" -d msdb -i "$script" -b
