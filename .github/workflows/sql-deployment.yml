@@ -7,7 +7,7 @@ jobs:
   deploy-ssis:
     runs-on: windows-latest
 
-    env:
+    env: Dev
       SQL_SERVER: ${{ secrets.SQL_SERVER }}
       SQL_PORT: ${{ secrets.SQL_PORT }}
       SQL_USERNAME: ${{ secrets.SQL_USERNAME }}
