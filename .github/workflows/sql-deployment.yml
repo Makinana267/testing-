@@ -1,21 +1,13 @@
 name: Deploy SSIS Packages and Agent Jobs
+
 on:
-  push:
-    branches: [ main ]
-    paths:
-      - 'ssis/**'
-      - 'sql/**'
-  pull_request:
-    branches: [ main ]
-    paths:
-      - 'ssis/**'
-      - 'sql/**'
   workflow_dispatch:
 
 jobs:
   deploy-ssis-and-jobs:
     runs-on: windows-latest
     environment: Production
+
     env:
       SQL_SERVER: ${{ secrets.NGROK_PUBLIC_URL }}
       SQL_PORT: ${{ secrets.SQL_PORT }}
@@ -27,72 +19,61 @@ jobs:
       SSIS_ISPAC_PATH: ssis/TimesheetETL.ispac
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout Repository
+      uses: actions/checkout@v4
 
-      - name: Install SQL Server Management Objects (SMO)
-        run: |
-          Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
-          Install-Module -Name SqlServer -Force -Scope CurrentUser
+    - name: Install SQL Server PowerShell Modules
+      run: |
+        Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
+        Install-Module -Name SqlServer -Force -Scope CurrentUser
+      shell: powershell
 
-      - name: Deploy SSIS Project
-        run: |
-          $server = "${{ env.SQL_SERVER }}"
-          $port = "${{ env.SQL_PORT }}"
-          $username = "${{ env.SQL_USERNAME }}"
-          $password = "${{ env.SQL_PASSWORD }}"
-          $folderName = "${{ env.SSIS_FOLDER_NAME }}"
-          $projectName = "${{ env.SSIS_PROJECT_NAME }}"
-          $ispacPath = "${{ env.SSIS_ISPAC_PATH }}"
+    - name: Deploy SSIS Project (.ispac)
+      run: |
+        $server = "${{ env.SQL_SERVER }}"
+        $port = "${{ env.SQL_PORT }}"
+        $username = "${{ env.SQL_USERNAME }}"
+        $password = "${{ env.SQL_PASSWORD }}"
+        $folderName = "${{ env.SSIS_FOLDER_NAME }}"
+        $projectName = "${{ env.SSIS_PROJECT_NAME }}"
+        $ispacPath = "${{ github.workspace }}\${{ env.SSIS_ISPAC_PATH }}"
 
-          # Load SMO and Integration Services assemblies
-          Import-Module SqlServer
-          [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.Management.IntegrationServices") | Out-Null
+        Import-Module SqlServer
+        Add-Type -AssemblyName "Microsoft.SqlServer.Management.IntegrationServices"
 
-          # Create connection string
-          $connString = "Data Source=$server,$port;Initial Catalog=master;User ID=$username;Password=$password;TrustServerCertificate=True;"
+        $connString = "Data Source=$server,$port;Initial Catalog=master;User ID=$username;Password=$password;TrustServerCertificate=True;"
+        $sqlConn = New-Object System.Data.SqlClient.SqlConnection($connString)
+        $integrationServices = New-Object Microsoft.SqlServer.Management.IntegrationServices.IntegrationServices($sqlConn)
 
-          # Connect to SQL Server
-          $sqlConn = New-Object System.Data.SqlClient.SqlConnection($connString)
-          $integrationServices = New-Object Microsoft.SqlServer.Management.IntegrationServices.IntegrationServices($sqlConn)
+        $catalog = $integrationServices.Catalogs["SSISDB"]
+        if (-not $catalog) {
+          Write-Error "SSISDB catalog not found!"
+          exit 1
+        }
 
-          # Get or create SSISDB catalog
-          $catalog = $integrationServices.Catalogs["SSISDB"]
-          if (-not $catalog) {
-            Write-Error "SSISDB catalog not found!"
-            exit 1
-          }
+        $folder = $catalog.Folders[$folderName]
+        if (-not $folder) {
+          $folder = New-Object Microsoft.SqlServer.Management.IntegrationServices.CatalogFolder($catalog, $folderName, "SSIS Folder")
+          $folder.Create()
+        }
 
-          # Create or update folder
-          $folder = $catalog.Folders[$folderName]
-          if (-not $folder) {
-            $folder = New-Object Microsoft.SqlServer.Management.IntegrationServices.CatalogFolder($catalog, $folderName, "SSIS Folder")
-            $folder.Create()
-          }
+        Write-Host "Deploying SSIS project: $projectName to folder: $folderName"
+        $projectFile = [System.IO.File]::ReadAllBytes($ispacPath)
+        $folder.DeployProject($projectName, $projectFile)
+        Write-Host "SSIS Deployment completed successfully."
+      shell: powershell
 
-          # Deploy project
-          Write-Host "Deploying $projectName to $folderName"
-          $projectFile = [System.IO.File]::ReadAllBytes($ispacPath)
-          $folder.DeployProject($projectName, $projectFile)
-          Write-Host "Deployment completed"
-        shell: powershell
+    - name: Install sqlcmd utility
+      run: choco install sqlserver-cmdlineutils -y
+      shell: powershell
 
-      - name: Install sqlcmd
-        run: |
-          choco install sqlserver-cmdlineutils -y
-        shell: powershell
+    - name: Deploy SQL Server Agent Job
+      run: |
+        $server = "${{ env.SQL_SERVER }}"
+        $port = "${{ env.SQL_PORT }}"
+        $username = "${{ env.SQL_USERNAME }}"
+        $password = "${{ env.SQL_PASSWORD }}"
+        $sqlScriptPath = "${{ github.workspace }}\sql\create_agent_job.sql"
 
-      - name: Deploy SQL Server Agent Job
-        run: |
-          $server = "${{ env.SQL_SERVER }}"
-          $port = "${{ env.SQL_PORT }}"
-          $username = "${{ env.SQL_USERNAME }}"
-          $password = "${{ env.SQL_PASSWORD }}"
-          $sqlScript = "sql/create_agent_job.sql"
-
-          # Replace placeholder in SQL script with server name
-          (Get-Content $sqlScript) -replace '\$\(SQLSERVER\)', "$server,$port" | Set-Content $sqlScript
-
-          # Execute T-SQL script
-          sqlcmd -S "$server,$port" -U "$username" -P "$password" -d "msdb" -i "$sqlScript" -b -I
-        shell: powershell
+        sqlcmd -S "$server,$port" -U "$username" -P "$password" -d msdb -i "$sqlScriptPath" -b -I
+      shell: powershell
