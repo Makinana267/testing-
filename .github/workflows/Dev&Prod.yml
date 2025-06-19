@@ -20,19 +20,4 @@ jobs:
           db_script: 'create_db_and_table.sql'
           proc_script: 'create_stored_procedure.sql'
 
-  deploy-prod:
-    runs-on: ubuntu-latest
-    needs: deploy-dev  # Runs after Dev deployment
-    environment: Prod  # Production environment
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3  # Ensure repository is checked out first
-      - name: Deploy SQL to Prod
-        uses: ./.github/actions/testing  # Reference the custom action
-        with:
-          environment: Prod
-          sql_server_host: ${{ secrets.PROD_SQL_SERVER_HOST }}
-          sql_user: ${{ secrets.PROD_SQL_USER }}
-          sql_password: ${{ secrets.PROD_SQL_PASSWORD }}
-          db_script: 'create_db_and_table.sql'
-          proc_script: 'create_stored_procedure.sql'
+  
