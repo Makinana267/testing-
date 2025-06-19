@@ -20,6 +20,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
+      - name: Install SqlServer Module
+        shell: powershell
+        run: |
+          Install-Module -Name SqlServer -Force -AllowClobber -Scope CurrentUser
+
+      - name: Set PowerShell Execution Policy
+        shell: powershell
+        run: |
+          Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
+
       - name: Deploy SSIS Package
         shell: powershell
         run: |
