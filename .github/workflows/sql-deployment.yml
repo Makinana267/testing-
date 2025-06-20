@@ -20,16 +20,28 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-
       - name: Install SqlServer Module with NuGet Provider
         shell: powershell
         run: |
-         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
-         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
-         Install-Module -Name SqlServer -Scope CurrentUser -Force -Confirm:$false
+          [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+          Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+          Install-Module -Name SqlServer -Scope CurrentUser -Force -Confirm:$false
 
-
-    
+      - name: Install SSIS Assembly
+        shell: powershell
+        run: |
+          $nugetUrl = "https://www.nuget.org/api/v2/package/Microsoft.SqlServer.Management.IntegrationServices/16.0.0"
+          $outputDir = "$env:USERPROFILE\NuGetPackages"
+          $packagePath = "$outputDir\Microsoft.SqlServer.Management.IntegrationServices.16.0.0"
+          $dllPath = "$packagePath\lib\net45\Microsoft.SqlServer.Management.IntegrationServices.dll"
+          
+          if (-not (Test-Path $dllPath)) {
+            New-Item -ItemType Directory -Path $outputDir -Force
+            Invoke-WebRequest -Uri $nugetUrl -OutFile "$outputDir\ssis.zip"
+            Expand-Archive -Path "$outputDir\ssis.zip" -DestinationPath $packagePath -Force
+          }
+          
+          Add-Type -Path $dllPath
 
       - name: Set PowerShell Execution Policy
         shell: powershell
@@ -40,12 +52,10 @@ jobs:
         shell: powershell
         run: |
           Import-Module SqlServer -Force
-
-          Add-Type -AssemblyName "Microsoft.SqlServer.Management.IntegrationServices"
-
+          
           $server = "${{ env.SQL_SERVER }}"
           $port = "${{ env.SQL_PORT }}"
-          $user = "${{ env.DEV_SQL_USER  }}"
+          $user = "${{ env.DEV_SQL_USER }}"
           $pass = "${{ env.DEV_SQL_PASSWORD }}"
           $folder = "${{ env.SSIS_FOLDER_NAME }}"
           $project = "${{ env.SSIS_PROJECT_NAME }}"
