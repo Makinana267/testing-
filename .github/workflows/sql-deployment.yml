@@ -20,20 +20,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Update PowerShellGet
-        shell: powershell
-        run: |
-          Install-Module -Name PowerShellGet -Force -AllowClobber -Scope CurrentUser
 
-      - name: Install NuGet Provider
+      - name: Install SqlServer Module with NuGet Provider
         shell: powershell
         run: |
-          Install-PackageProvider -Name NuGet -Force -Scope CurrentUser
+         [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+         Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
+         Install-Module -Name SqlServer -Scope CurrentUser -Force -Confirm:$false
 
-      - name: Install SqlServer Module
-        shell: powershell
-        run: |
-          Install-Module -Name SqlServer -Force -AllowClobber -Scope CurrentUser
+
+    
 
       - name: Set PowerShell Execution Policy
         shell: powershell
