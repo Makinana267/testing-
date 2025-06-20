@@ -5,7 +5,7 @@ on:
 
 jobs:
   deploy-ssis:
-    runs-on: self-hosted  # Your self-hosted Windows runner
+    runs-on: self-hosted  # Ensure this is your Windows machine with SSIS + SQL installed
 
     env:
       SQL_SERVER: ${{ secrets.SQL_SERVER }}
@@ -17,34 +17,43 @@ jobs:
       SSIS_PROJECT_NAME: TimesheetETL
 
     steps:
-      - name: Checkout code
+      - name: Checkout source code
         uses: actions/checkout@v4
 
-      - name: Install NuGet and SqlServer module
+      - name: Install NuGet provider and SqlServer module
         shell: powershell
         run: |
           [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
           Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.201 -Force
           Install-Module -Name SqlServer -Scope CurrentUser -Force -Confirm:$false
 
-      - name: Download SMO package for IntegrationServices.dll
+      - name: Install SMO package for IntegrationServices.dll
         shell: powershell
         run: |
-          $outputDir = "$env:USERPROFILE\NuGetPackages"
-          $pkg = "Microsoft.SqlServer.SqlManagementObjects"
-          $ver = "172.76.0"
-          Save-Package -Name $pkg -RequiredVersion $ver -Path $outputDir -Force
-          $nupkg = Get-ChildItem -Path "$outputDir\$pkg\$ver" -Filter *.nupkg | Select-Object -First 1
-          Expand-Archive -Path $nupkg.FullName -DestinationPath "$outputDir\$pkg\$ver\expanded" -Force
-          $dllPath = Get-ChildItem -Recurse "$outputDir\$pkg\$ver\expanded" -Filter Microsoft.SqlServer.Management.IntegrationServices.dll | Select-Object -First 1 -ExpandProperty FullName
-          Add-Type -Path $dllPath
+          $sourceName = "nuget.org"
+          $sourceUrl  = "https://api.nuget.org/v3/index.json"
+
+          if (-not (Get-PackageSource | Where-Object { $_.Name -eq $sourceName })) {
+            Register-PackageSource -Name $sourceName -ProviderName NuGet -Location $sourceUrl -Trusted -Force
+          }
+
+          Install-Package -Name Microsoft.SqlServer.SqlManagementObjects -RequiredVersion 172.76.0 -Source $sourceName -Force -Scope CurrentUser
+
+          $dll = Get-ChildItem -Recurse "$env:USERPROFILE\Documents\WindowsPowerShell\Modules\Microsoft.SqlServer.SqlManagementObjects" `
+                   -Filter Microsoft.SqlServer.Management.IntegrationServices.dll | Select-Object -First 1 -ExpandProperty FullName
+
+          if (-not (Test-Path $dll)) {
+            throw "IntegrationServices.dll not found in SMO package"
+          }
+
+          Add-Type -Path $dll
 
       - name: Set PowerShell Execution Policy
         shell: powershell
         run: |
           Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned -Force
 
-      - name: Deploy SSIS Package
+      - name: Deploy SSIS Package to SSISDB
         shell: powershell
         run: |
           Import-Module SqlServer -Force
@@ -75,7 +84,7 @@ jobs:
 
           $projectBytes = [System.IO.File]::ReadAllBytes($ispac)
           $folderObj.DeployProject($project, $projectBytes)
-          Write-Host "SSIS Deployment completed."
+          Write-Host "✅ SSIS Deployment completed."
 
       - name: Deploy SQL Agent Job
         shell: powershell
