@@ -1,22 +1,35 @@
 
-name: Deploy SSIS Packages to SQL Server
+name: 'Deploy SSIS Packages'
+description: 'Deploys SSIS packages to SQL Server using dtutil.exe'
 
-on:
-  workflow_dispatch:  # Manual trigger
+inputs:
+  sql_server_host:
+    description: 'SQL Server host'
+    required: true
+  sql_user:
+    description: 'SQL Server username'
+    required: true
+  sql_password:
+    description: 'SQL Server password'
+    required: true
+  package_path:
+    description: 'Path to the SSIS package (.dtsx) in the repository'
+    required: true
+  destination_path:
+    description: 'Destination path in SSIS Catalog (e.g., /SSISDB/Folder/Package)'
+    required: true
 
-jobs:
-  deploy-ssis:
-    runs-on: self-hosted  # Windows self-hosted runner
-    environment: Dev  # Development environment
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
-      - name: Deploy SSIS Packages
-        uses: ./.github/actions/deploy-ssis
-        with:
-          sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
-          sql_user: ${{ secrets.DEV_SQL_USER }}
-          sql_password: ${{ secrets.DEV_SQL_PASSWORD }}
-          package_path: 'path/to/your/package.dtsx'  # Path to .dtsx file in repo
-          destination_path: '/SSISDB/YourFolder/YourPackage'  # SSIS Catalog path
+runs:
+  using: 'composite'
+  steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    - name: Deploy SSIS Package
+      shell: powershell
+      run: |
+        $dtutilPath = "C:\Program Files\Microsoft SQL Server\130\DTS\Binn\dtutil.exe"
+        $env:Path += ";C:\Program Files\Microsoft SQL Server\130\DTS\Binn"
+        & "$dtutilPath" /Copy SQL;"${{ inputs.destination_path }}" /DestServer "${{ inputs.sql_server_host }}" /DestUser "${{ inputs.sql_user }}" /DestPassword "${{ inputs.sql_password }}" /File "${{ inputs.package_path }}"
+      env:
+        SQLCMD: sqlcmd
 ```
