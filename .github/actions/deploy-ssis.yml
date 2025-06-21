@@ -21,13 +21,9 @@ inputs:
 runs:
   using: 'composite'
   steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
     - name: Deploy SSIS Package
       shell: powershell
       run: |
         $dtutilPath = "C:\Program Files\Microsoft SQL Server\130\DTS\Binn\dtutil.exe"
         $env:Path += ";C:\Program Files\Microsoft SQL Server\130\DTS\Binn"
-        & "$dtutilPath" /Copy SQL;"${{ inputs.destination_path }}" /DestServer "${{ inputs.sql_server_host }}" /DestUser "${{ inputs.sql_user }}" /DestPassword "${{ inputs.sql_password }}" /File "${{ inputs.package_path }}"
-      env:
-        SQLCMD: sqlcmd
+        & "$dtutilPath" /Copy SQL:"${{ inputs.destination_path }}" /DestServer "${{ inputs.sql_server_host }}" /DestUser "${{ inputs.sql_user }}" /DestPassword "${{ inputs.sql_password }}" /File "${{ inputs.package_path }}"
