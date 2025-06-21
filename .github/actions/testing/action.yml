@@ -13,7 +13,7 @@ inputs:
     required: true
   sql_password:
     description: 'SQL Server password'
-    required: true UKNOWN
+    required: true
   db_script:
     description: 'Path to the database creation script'
     required: false
