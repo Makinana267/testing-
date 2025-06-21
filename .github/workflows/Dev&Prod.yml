@@ -9,9 +9,9 @@ jobs:
     environment: Dev  # Development environment
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3  # Ensure repository is checked out
+        uses: actions/checkout@v3
       - name: Deploy SQL to Dev
-        uses: ./.github/actions/testing  # Reference the custom action
+        uses: ./.github/actions/testing
         with:
           environment: Dev
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
