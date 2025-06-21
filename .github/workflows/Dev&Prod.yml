@@ -5,11 +5,11 @@ on:
 
 jobs:
   deploy-dev:
-    runs-on: ubuntu-latest
+    runs-on: self-hosted  # Use self-hosted runner
     environment: Dev  # Development environment
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v3  # Ensure repository is checked out first
+        uses: actions/checkout@v3  # Ensure repository is checked out
       - name: Deploy SQL to Dev
         uses: ./.github/actions/testing  # Reference the custom action
         with:
@@ -19,5 +19,3 @@ jobs:
           sql_password: ${{ secrets.DEV_SQL_PASSWORD }}
           db_script: 'create_db_and_table.sql'
           proc_script: 'create_stored_procedure.sql'
-
-  
