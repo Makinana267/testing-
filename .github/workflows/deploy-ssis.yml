@@ -5,7 +5,7 @@ on:
 
 jobs:
   deploy-ssis:
-    runs-on: self-hosted  # Make sure your runner has SSIS installed
+    runs-on: self-hosted  # Make sure this machine has SSIS installed
     environment: Dev
 
     steps:
@@ -18,6 +18,7 @@ jobs:
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
           sql_user: ${{ secrets.DEV_SQL_USER }}
           sql_password: ${{ secrets.DEV_SQL_PASSWORD }}
-          package_path: 'ssis/customer_import.dtsx'  # ✅ Update with actual file name
-          destination_path: '/SSISDB/ETL/customer_import'  # ✅ Update with actual SSIS path
+          package_path: 'ssis/TimesheetETL.dtsx'  # ✅ actual filename
+          destination_path: '/SSISDB/ETL/TimesheetETL'  # ✅ your target SSIS path
+
 
