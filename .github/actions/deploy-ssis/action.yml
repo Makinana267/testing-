@@ -26,9 +26,9 @@ runs:
     - name: Deploy SSIS Package
       shell: powershell
       run: |
-        $dtutilPath = "C:\Program Files\Microsoft SQL Server\130\DTS\Binn\dtutil.exe"
-        $env:Path += ";C:\Program Files\Microsoft SQL Server\130\DTS\Binn"
-        if (-not (Test-Path $dtutilPath)) { throw "dtutil.exe not found at $dtutilPath. Ensure SSIS is installed." }
+        $dtutilPath = "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\dtutil.exe"  # Updated for SQL Server 2022
+        $env:Path += ";C:\Program Files\Microsoft SQL Server\160\DTS\Binn"
+        if (-not (Test-Path $dtutilPath)) { throw "dtutil.exe not found at $dtutilPath. Ensure SSIS for SQL Server 2022 is installed." }
         if (-not (Test-Path "${{ inputs.package_path }}")) { throw "SSIS package not found at ${{ inputs.package_path }}" }
         & $dtutilPath /Copy "SQL;${{ inputs.destination_path }}" /DestServer "${{ inputs.sql_server_host }}" /DestUser "${{ inputs.sql_user }}" /DestPassword "${{ inputs.sql_password }}" /File "${{ inputs.package_path }}"
       env:
