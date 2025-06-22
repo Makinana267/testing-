@@ -5,16 +5,19 @@ on:
 
 jobs:
   deploy-ssis:
-    runs-on: self-hosted  # Windows self-hosted runner
-    environment: Dev  # Development environment
+    runs-on: self-hosted  # Make sure your runner has SSIS installed
+    environment: Dev
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
-      - name: Deploy SSIS Packages
+
+      - name: Deploy SSIS Package
         uses: ./.github/actions/deploy-ssis
         with:
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
           sql_user: ${{ secrets.DEV_SQL_USER }}
           sql_password: ${{ secrets.DEV_SQL_PASSWORD }}
-          package_path: 'ssis/MyActualPackage.dtsx'  # Update to actual .dtsx file path
-          destination_path: '/SSISDB/ETL/MyActualPackage'  # Update to actual SSISDB path
+          package_path: 'ssis/customer_import.dtsx'  # ✅ Update with actual file name
+          destination_path: '/SSISDB/ETL/customer_import'  # ✅ Update with actual SSIS path
+
