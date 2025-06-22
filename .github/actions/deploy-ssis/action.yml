@@ -41,4 +41,5 @@ runs:
           throw "SSIS package not found at ${{ inputs.package_path }}"
         }
 
+        Write-Host "Deploying SSIS package: ${{ inputs.package_path }}"
         & $dtutilPath /Copy "SQL;${{ inputs.destination_path }}" /DestServer "${{ inputs.sql_server_host }}" /DestUser "${{ inputs.sql_user }}" /DestPassword "${{ inputs.sql_password }}" /File "${{ inputs.package_path }}"
