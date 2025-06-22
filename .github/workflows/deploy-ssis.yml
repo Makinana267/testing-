@@ -1,4 +1,3 @@
-
 name: Deploy SSIS Packages to SQL Server
 
 on:
@@ -17,5 +16,5 @@ jobs:
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
           sql_user: ${{ secrets.DEV_SQL_USER }}
           sql_password: ${{ secrets.DEV_SQL_PASSWORD }}
-          package_path: 'path/to/your/package.dtsx'  # Path to .dtsx file in repo
-          destination_path: '/SSISDB/YourFolder/YourPackage'  # SSIS Catalog pat
+          package_path: 'path/to/your/package.dtsx'  # Update to your .dtsx file path
+          destination_path: '/SSISDB/YourFolder/YourPackage'  # Update to your SSISDB path
