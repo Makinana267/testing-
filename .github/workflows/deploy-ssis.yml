@@ -17,4 +17,4 @@ jobs:
           sql_user: ${{ secrets.DEV_SQL_USER }}
           sql_password: ${{ secrets.DEV_SQL_PASSWORD }}
           package_path: 'ssis/TimesheetFormStage.dtsx'
-          destination_path: '/SSISDB/project/MyTimesheetPackage'
+          destination_path: '/SSISDB/project/Projects/MyTimesheetPackage'
