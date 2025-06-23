@@ -45,11 +45,6 @@ jobs:
           }
           Write-Output "All required tools found."
 
-      - name: Copy Project.params to SSIS folder
-        shell: powershell
-        run: |
-          Copy-Item "${{ github.workspace }}\Project.params" -Destination "${{ github.workspace }}\ssis\" -Force
-
       - name: Build SSIS Project
         shell: powershell
         run: |
@@ -62,4 +57,57 @@ jobs:
           & "C:\SSISDevOpsTools\SSISBuild.exe" -p:"$projectFile" -o:"$outputDir" -c:"$config" -l:DIAG
           $ispacPath = Join-Path $outputDir "$config\ProjectSecondForLeave.ispac"
           if (-not (Test-Path $ispacPath)) {
-            Wr
+            Write-Error "Build failed: .ispac file not found at $ispacPath"
+            exit 1
+          }
+          Write-Output "Build succeeded: $ispacPath"
+
+      - name: Create SSIS Catalog Folder if missing
+        shell: powershell
+        run: |
+          $sqlServer = "SAMBE202519"
+          $catalogDB = "SSISDB"
+          $folderName = "ETL"
+          $folderExists = sqlcmd -S $sqlServer -d $catalogDB -Q "SELECT 1 FROM catalog.folders WHERE name = '$folderName'" -E -h -1
+          if ([string]::IsNullOrEmpty($folderExists)) {
+            Write-Output "Folder '$folderName' does not exist. Creating..."
+            sqlcmd -S $sqlServer -d $catalogDB -Q "EXEC catalog.create_folder @folder_name = '$folderName'" -E
+          } else {
+            Write-Output "Folder '$folderName' exists."
+          }
+
+      - name: Deploy SSIS Project via stored procedure
+        shell: powershell
+        run: |
+          $ispacPath = "${{ runner.temp }}\SSISOutput\Development\ProjectSecondForLeave.ispac"
+          $sqlServer = "SAMBE202519"
+          $catalogDB = "SSISDB"
+          $folderName = "ETL"
+          $projectName = "ProjectSecondForLeave"
+          Add-Type -AssemblyName System.Data
+          Write-Output "Reading .ispac file from $ispacPath"
+          $projectBytes = [System.IO.File]::ReadAllBytes($ispacPath)
+          $connString = "Data Source=$sqlServer;Initial Catalog=$catalogDB;Integrated Security=SSPI;"
+          $conn = New-Object System.Data.SqlClient.SqlConnection $connString
+          $conn.Open()
+          $cmd = $conn.CreateCommand()
+          $cmd.CommandText = "[catalog].[deploy_project]"
+          $cmd.CommandType = [System.Data.CommandType]::StoredProcedure
+          $p1 = $cmd.Parameters.Add("@folder_name", [System.Data.SqlDbType]::NVarChar, 128)
+          $p1.Value = $folderName
+          $p2 = $cmd.Parameters.Add("@project_name", [System.Data.SqlDbType]::NVarChar, 128)
+          $p2.Value = $projectName
+          $p3 = $cmd.Parameters.Add("@project_stream", [System.Data.SqlDbType]::VarBinary, -1)
+          $p3.Value = $projectBytes
+          try {
+            Write-Output "Deploying project..."
+            $cmd.ExecuteNonQuery() | Out-Null
+            Write-Output "Deployment succeeded!"
+          }
+          catch {
+            Write-Error "Deployment failed: $_"
+            exit 1
+          }
+          finally {
+            $conn.Close()
+          }
