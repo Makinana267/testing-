@@ -15,5 +15,5 @@ jobs:
         uses: ./.github/actions/deploy-ssis
         with:
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
-          ispac_path: 'ssis/bin/Development/ProjectSecondForLeave.ispac'
+          ispac_path: 'ssis/TimesheetFormStage.dtsx'
           catalog_path: 'SSISDB/ETL'
