@@ -10,11 +10,11 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
+
       - name: Deploy SSIS Packages
         uses: ./.github/actions/deploy-ssis
         with:
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
-          sql_user: ${{ secrets.DEV_SQL_USER }}
-          sql_password: ${{ secrets.DEV_SQL_PASSWORD }}
           package_path: 'ssis/TimesheetFormStage.dtsx'
-          destination_path: '/SSISDB/ETL/Projects'
+          destination_path: '/ETL/Projects'
+
