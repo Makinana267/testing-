@@ -1,20 +1,19 @@
 name: Deploy SSIS Packages to SQL Server
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger
 
 jobs:
   deploy-ssis:
-    runs-on: self-hosted
-    environment: Dev
-
+    runs-on: self-hosted  # Windows self-hosted runner
+    environment: Dev  # Development environment
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Deploy SSIS Package
+      - name: Deploy SSIS Packages
         uses: ./.github/actions/deploy-ssis
         with:
-          sql_server_host: 'localhost'
+          sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
           package_path: 'ssis/TimesheetFormStage.dtsx'
-          folder_path: 'MSDB\ETL'  # Updated to MSDB\ETL
+          destination_path: '/ETL/Projects'
