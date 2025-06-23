@@ -1,42 +1,63 @@
-name: Deploy SSIS Package
-description: Deploys an SSIS package to SQL Server SSISDB or MSDB
+name: Deploy SSIS Packages to SQL Server
 
-inputs:
-  sql_server_host:
-    description: 'SQL Server hostname'
-    required: true
-  ispac_path:
-    description: 'Path to the SSIS package (.dtsx or .ispac)'
-    required: true
-  catalog_path:
-    description: 'SSISDB catalog path (e.g., SSISDB/ETL)'
-    required: false
-    default: ''
+on:
+  workflow_dispatch:
 
-runs:
-  using: composite
-  steps:
-    - name: Deploy SSIS Package
-      shell: powershell
-      run: |
-        $dtutilPath = "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\dtutil.exe"
-        if (-not (Test-Path $dtutilPath)) { throw "dtutil.exe not found. Ensure SSIS tools are installed." }
+jobs:
+  deploy-ssis:
+    runs-on: self-hosted
+    environment: Dev
 
-        $server = "${{ inputs.sql_server_host }}"
-        $packagePath = "${{ inputs.ispac_path }}"
-        $catalogPath = "${{ inputs.catalog_path }}"
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-        if (-not (Test-Path $packagePath)) { throw "SSIS package not found at $packagePath" }
+      - name: Debug workspace and user
+        shell: powershell
+        run: |
+          Write-Output "Workspace path: ${{ github.workspace }}"
+          Write-Output "Current user: $env:USERDOMAIN\$env:USERNAME"
+          Get-ChildItem -Path "${{ github.workspace }}" -Recurse
 
-        Write-Host "Deploying $packagePath to $server"
+      - name: Verify SSIS project file exists
+        shell: powershell
+        run: |
+          $projectPath = "${{ github.workspace }}\HandsOnProject\Timesheets"
+          if (-not (Test-Path "$projectPath\Integration Services Project1.dtproj")) {
+            Write-Error "SSIS project file not found at: $projectPath"
+            exit 1
+          }
+          Write-Output "Found SSIS project file at $projectPath"
 
-        if ($catalogPath) {
-          # Deploy to SSISDB
-          Write-Host "Deploying to SSISDB catalog: $catalogPath"
-          & $dtutilPath /FILE "$packagePath" /COPY SQL;"$catalogPath" /DestServer $server
-        } else {
-          # Deploy to MSDB
-          $msdbPath = [System.IO.Path]::GetFileNameWithoutExtension($packagePath)
-          Write-Host "Deploying to MSDB as $msdbPath"
-          & $dtutilPath /FILE "$packagePath" /COPY SQL;"$msdbPath" /DestServer $server
-        }
+      - name: Verify SSIS build tools exist
+        shell: powershell
+        run: |
+          if (-not (Test-Path "C:\SSISDevOpsTools\SSISBuild.exe")) {
+            Write-Error "SSISBuild.exe not found in C:\SSISDevOpsTools"
+            exit 1
+          }
+          if (-not (Test-Path "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\ISDeploymentWizard.exe")) {
+            Write-Error "ISDeploymentWizard.exe not found"
+            exit 1
+          }
+          if (-not (Get-Command sqlcmd.exe -ErrorAction SilentlyContinue)) {
+            Write-Error "sqlcmd.exe not found"
+            exit 1
+          }
+          Write-Output "All required tools found."
+
+      - name: Build and Deploy SSIS Project
+        uses: ./.github/actions/deploy-ssis
+        with:
+          sql_server: ${{ secrets.DEV_SQL_SERVER_HOST }}
+          catalog_db: 'SSISDB'
+          folder_name: 'TimesheetMigration'
+          project_name: 'Integration Services Project1'
+          project_file: '${{ github.workspace }}\HandsOnProject\Timesheets\Integration Services Project1.dtproj'
+          config: 'Development'
+
+      - name: Debug Secret (Optional)
+        if: failure()
+        shell: bash
+        run: |
+          echo "Server: ${{ secrets.DEV_SQL_SERVER_HOST }}" | sed 's/./*/g'
