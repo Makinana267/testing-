@@ -16,5 +16,5 @@ jobs:
         with:
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
           package_path: 'ssis/TimesheetFormStage.dtsx'
-          destination_path: '/ETL/Projects'
+          destination_path: '/SSISDB/ETL/Projects'
 
