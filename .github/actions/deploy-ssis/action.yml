@@ -1,15 +1,15 @@
 name: 'Deploy SSIS Packages'
-description: 'Creates folder in SSIS Package Store if needed and deploys SSIS packages using dtutil.exe with Windows Authentication'
+description: 'Creates folder in SSIS Catalog (SSISDB) if needed and deploys SSIS project (.ispac) using PowerShell'
 
 inputs:
   sql_server_host:
     description: 'SQL Server host'
     required: true
   package_path:
-    description: 'Path to the SSIS package (.dtsx) in the repository'
+    description: 'Path to the SSIS project (.ispac) in the repository'
     required: true
   folder_path:
-    description: 'Folder path in MSDB or File System (e.g., MSDB\ETL)'
+    description: 'Folder path in SSISDB (e.g., SSISDB\ETL)'
     required: true
 
 runs:
@@ -21,11 +21,42 @@ runs:
     - name: Deploy SSIS Package
       shell: powershell
       run: |
-        $dtutilPath = "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\dtutil.exe"
-        $env:Path += ";C:\Program Files\Microsoft SQL Server\160\DTS\Binn"
+        # Validate SqlServer module
+        if (-not (Get-Module -ListAvailable -Name SqlServer)) { throw "SqlServer PowerShell module not found. Install it on the runner." }
 
-        if (-not (Test-Path $dtutilPath)) { throw "dtutil.exe not found at $dtutilPath. Ensure SSIS for SQL Server 2022 is installed." }
-        if (-not (Test-Path "${{ inputs.package_path }}")) { throw "SSIS package not found at ${{ inputs.package_path }}" }
+        $ispacPath = "${{ inputs.package_path }}"
+        $sqlServer = "${{ inputs.sql_server_host }}"
+        $catalogFolder = "${{ inputs.folder_path }}"
 
-        # Copy the package to the specified folder in MSDB or File System
-        & $dtutilPath /Copy "SQL;${{ inputs.folder_path }}" /DestServer "${{ inputs.sql_server_host }}" /Windows /File "${{ inputs.package_path }}"
+        # Validate .ispac file
+        if (-not (Test-Path $ispacPath)) { throw "ISPAC file not found at $ispacPath" }
+
+        # Load Integration Services assembly
+        [System.Reflection.Assembly]::LoadWithPartialName("Microsoft.SqlServer.Management.IntegrationServices") | Out-Null
+
+        # Connect to SQL Server
+        $connectionString = "Data Source=$sqlServer;Integrated Security=True;"
+        $sqlConnection = New-Object System.Data.SqlClient.SqlConnection $connectionString
+        $integrationServices = New-Object Microsoft.SqlServer.Management.IntegrationServices.IntegrationServices $sqlConnection
+
+        # Get or create SSISDB catalog
+        $catalog = $integrationServices.Catalogs["SSISDB"]
+        if (-not $catalog) { throw "SSISDB catalog not found on $sqlServer. Ensure the SSIS Catalog is enabled." }
+
+        # Extract folder name (e.g., SSISDB\ETL -> ETL)
+        $folderName = $catalogFolder.Split('\')[-1]
+
+        # Create or get folder
+        $folder = $catalog.Folders[$folderName]
+        if (-not $folder) {
+          Write-Host "Creating folder $folderName in SSISDB"
+          $folder = New-Object Microsoft.SqlServer.Management.IntegrationServices.CatalogFolder($catalog, $folderName, $folderName)
+          $folder.Create()
+        }
+
+        # Deploy the project
+        Write-Host "Deploying project from $ispacPath to SSISDB\$folderName"
+        $projectName = [System.IO.Path]::GetFileNameWithoutExtension($ispacPath)
+        $projectBytes = [System.IO.File]::ReadAllBytes($ispacPath)
+        $folder.DeployProject($projectName, $projectBytes)
+        Write-Host "Successfully deployed project $projectName to SSISDB\$folderName"
