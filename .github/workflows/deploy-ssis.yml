@@ -17,5 +17,5 @@ jobs:
         with:
           sql_server_host: 'localhost'
           package_path: 'ssis/TimesheetFormStage.dtsx'
-          folder_path: 'MSDB\ETL'
+          folder_path: 'SSISDB\ETL'
 
