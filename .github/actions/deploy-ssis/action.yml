@@ -1,5 +1,5 @@
 name: 'Deploy SSIS Packages'
-description: 'Creates SSIS catalog/folders if needed and deploys SSIS packages using dtutil.exe with Windows Authentication'
+description: 'Creates SSIS catalog folders if needed and deploys SSIS packages using dtutil.exe with Windows Authentication'
 
 inputs:
   sql_server_host:
