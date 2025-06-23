@@ -1,29 +1,42 @@
-name: Deploy SSIS Packages to SSISDB
+name: Deploy SSIS Package
+description: Deploys an SSIS package to SQL Server SSISDB or MSDB
 
-on:
-  workflow_dispatch:
+inputs:
+  sql_server_host:
+    description: 'SQL Server hostname'
+    required: true
+  ispac_path:
+    description: 'Path to the SSIS package (.dtsx or .ispac)'
+    required: true
+  catalog_path:
+    description: 'SSISDB catalog path (e.g., SSISDB/ETL)'
+    required: false
+    default: ''
 
-jobs:
-  deploy-ssis:
-    runs-on: self-hosted
-    environment: Dev
+runs:
+  using: composite
+  steps:
+    - name: Deploy SSIS Package
+      shell: powershell
+      run: |
+        $dtutilPath = "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\dtutil.exe"
+        if (-not (Test-Path $dtutilPath)) { throw "dtutil.exe not found. Ensure SSIS tools are installed." }
 
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v3
+        $server = "${{ inputs.sql_server_host }}"
+        $packagePath = "${{ inputs.ispac_path }}"
+        $catalogPath = "${{ inputs.catalog_path }}"
 
-      - name: Deploy SSIS Package to SSISDB
-        shell: powershell
-        run: |
-          $dtutilPath = "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\dtutil.exe"
-          if (-not (Test-Path $dtutilPath)) { throw "dtutil.exe not found. Ensure SSIS tools are installed." }
+        if (-not (Test-Path $packagePath)) { throw "SSIS package not found at $packagePath" }
 
-          $server = "${{ secrets.DEV_SQL_SERVER_HOST }}"
-          $packagePath = "ssis/TimesheetFormStage.dtsx"
-          $msdbPath = "MyDeployedPackage"  # Name to store package in MSDB
+        Write-Host "Deploying $packagePath to $server"
 
-          if (-not (Test-Path $packagePath)) { throw "SSIS package not found at $packagePath" }
-
-          Write-Host "Deploying $packagePath to SSISDB on $server as $msdbPath"
-
+        if ($catalogPath) {
+          # Deploy to SSISDB
+          Write-Host "Deploying to SSISDB catalog: $catalogPath"
+          & $dtutilPath /FILE "$packagePath" /COPY SQL;"$catalogPath" /DestServer $server
+        } else {
+          # Deploy to MSDB
+          $msdbPath = [System.IO.Path]::GetFileNameWithoutExtension($packagePath)
+          Write-Host "Deploying to MSDB as $msdbPath"
           & $dtutilPath /FILE "$packagePath" /COPY SQL;"$msdbPath" /DestServer $server
+        }
