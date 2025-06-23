@@ -12,10 +12,9 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Deploy SSIS Packages
+      - name: Deploy SSIS Package
         uses: ./.github/actions/deploy-ssis
         with:
           sql_server_host: 'localhost'
           package_path: 'ssis/TimesheetFormStage.dtsx'
-          folder_path: 'SSISDB\ETL'
-
+          folder_path: 'MSDB\ETL'  # Updated to MSDB\ETL
