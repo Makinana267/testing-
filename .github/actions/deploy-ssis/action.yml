@@ -1,34 +1,29 @@
-name: 'Deploy SSIS Project'
-description: 'Deploys SSIS .ispac project to SQL Server Integration Services Catalog'
+name: Deploy SSIS Packages to SSISDB
 
-inputs:
-  sql_server_host:
-    description: 'SQL Server host'
-    required: true
-  ispac_path:
-    description: 'Path to the .ispac file'
-    required: true
-  catalog_path:
-    description: 'SSIS Catalog path, e.g., SSISDB/ETL'
-    required: true
+on:
+  workflow_dispatch:
 
-runs:
-  using: 'composite'
-  steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
-    - name: Deploy SSIS Project
-      shell: powershell
-      run: |
-        $isDeploymentWizard = "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\ISDeploymentWizard.exe"  # Adjust version if needed
-        if (-not (Test-Path $isDeploymentWizard)) { throw "ISDeploymentWizard.exe not found at $isDeploymentWizard. Ensure SQL Server Data Tools are installed." }
-        
-        $ispacPath = "${{ inputs.ispac_path }}"
-        $server = "${{ inputs.sql_server_host }}"
-        $catalogPath = "${{ inputs.catalog_path }}"
+jobs:
+  deploy-ssis:
+    runs-on: self-hosted
+    environment: Dev
 
-        if (-not (Test-Path $ispacPath)) { throw "ISPAC file not found at $ispacPath" }
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-        Write-Host "Deploying $ispacPath to $server in $catalogPath"
+      - name: Deploy SSIS Package to SSISDB
+        shell: powershell
+        run: |
+          $dtutilPath = "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\dtutil.exe"
+          if (-not (Test-Path $dtutilPath)) { throw "dtutil.exe not found. Ensure SSIS tools are installed." }
 
-        & $isDeploymentWizard /Silent /SourcePath:$ispacPath /DestinationServer:$server /DestinationPath:"$catalogPath"
+          $server = "${{ secrets.DEV_SQL_SERVER_HOST }}"
+          $packagePath = "ssis/TimesheetFormStage.dtsx"
+          $msdbPath = "MyDeployedPackage"  # Name to store package in MSDB
+
+          if (-not (Test-Path $packagePath)) { throw "SSIS package not found at $packagePath" }
+
+          Write-Host "Deploying $packagePath to SSISDB on $server as $msdbPath"
+
+          & $dtutilPath /FILE "$packagePath" /COPY SQL;"$msdbPath" /DestServer $server
