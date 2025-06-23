@@ -7,13 +7,14 @@ jobs:
   deploy-ssis:
     runs-on: self-hosted
     environment: Dev
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
-      - name: Deploy SSIS Project
+      - name: Deploy SSIS Package
         uses: ./.github/actions/deploy-ssis
         with:
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
           ispac_path: 'ssis/TimesheetFormStage.dtsx'
-          catalog_path: 'SSISDB/ETL'
+          catalog_path: 'SSISDB/ETL'  # Set to empty ('') for MSDB deployment
