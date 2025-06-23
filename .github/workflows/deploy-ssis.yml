@@ -15,5 +15,5 @@ jobs:
         uses: ./.github/actions/deploy-ssis
         with:
           sql_server_host: ${{ secrets.DEV_SQL_SERVER_HOST }}
-          package_path: 'ssis/TimesheetFormStage.dtsx'
+          package_path: 'ssis/bin/Development'
           destination_path: '/SSISDB/ETL/Projects'  # Corrected path
