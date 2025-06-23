@@ -1,5 +1,5 @@
 name: 'Deploy SSIS Packages'
-description: 'Creates folder in SSIS Package Store (MSDB) if needed and deploys SSIS packages using dtutil.exe with Windows Authentication'
+description: 'Deploys SSIS packages to SQL Server using dtutil.exe with Windows Authentication'
 
 inputs:
   sql_server_host:
@@ -8,8 +8,8 @@ inputs:
   package_path:
     description: 'Path to the SSIS package (.dtsx) in the repository'
     required: true
-  folder_path:
-    description: 'Folder path in MSDB (e.g., MSDB\ETL)'
+  destination_path:
+    description: 'Destination path in SSIS Catalog (e.g., /ETL/Projects)'
     required: true
 
 runs:
@@ -17,27 +17,13 @@ runs:
   steps:
     - name: Checkout code
       uses: actions/checkout@v3
-
     - name: Deploy SSIS Package
       shell: powershell
       run: |
-        $dtutilPath = "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\dtutil.exe"
+        $dtutilPath = "C:\Program Files\Microsoft SQL Server\160\DTS\Binn\dtutil.exe"  # Updated for SQL Server 2022
         $env:Path += ";C:\Program Files\Microsoft SQL Server\160\DTS\Binn"
-
-        # Validate dtutil.exe and package path
+        
         if (-not (Test-Path $dtutilPath)) { throw "dtutil.exe not found at $dtutilPath. Ensure SSIS for SQL Server 2022 is installed." }
         if (-not (Test-Path "${{ inputs.package_path }}")) { throw "SSIS package not found at ${{ inputs.package_path }}" }
-
-        # Create folder in MSDB if it doesn't exist
-        & $dtutilPath /DestServer "${{ inputs.sql_server_host }}" /SQL "${{ inputs.folder_path }}" /Exists
-        if ($LASTEXITCODE -ne 0) {
-          Write-Host "Creating folder ${{ inputs.folder_path }} in MSDB"
-          & $dtutilPath /DestServer "${{ inputs.sql_server_host }}" /SQL "${{ inputs.folder_path }}" /Create
-          if ($LASTEXITCODE -ne 0) { throw "Failed to create folder ${{ inputs.folder_path }} in MSDB" }
-        }
-
-        # Deploy the package to MSDB
-        $command = "& $dtutilPath /File `"${{ inputs.package_path }}`" /Copy `"SQL;${{ inputs.folder_path }}`" /DestServer `"${{ inputs.sql_server_host }}`""
-        Write-Host "Executing: $command"
-        Invoke-Expression $command
-        if ($LASTEXITCODE -ne 0) { throw "dtutil failed with exit code $LASTEXITCODE" }
+        
+        & $dtutilPath /Copy "SQL;${{ inputs.destination_path }}" /DestServer "${{ inputs.sql_server_host }}" /File "${{ inputs.package_path }}"
