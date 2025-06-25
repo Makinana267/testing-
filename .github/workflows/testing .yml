@@ -72,17 +72,18 @@ jobs:
     
           $folderExists = sqlcmd -S $sqlServer -d $catalogDB -Q "SELECT 1 FROM catalog.folders WHERE name = '$folderName'" -E -h -1
           if ([string]::IsNullOrEmpty($folderExists)) {
-            Write-Output "Folder '$folderName' does not exist. Creating..."
-            $sqlScript = @"
-            DECLARE @folder_id BIGINT;
-            EXEC [catalog].[create_folder] @folder_name=N'Iviwe', @folder_id=@folder_id OUTPUT;
-            SELECT @folder_id;
-            EXEC [catalog].[set_folder_description] @folder_name=N'Iviwe', @folder_description=N'';
-            "@
+          Write-Output "Folder '$folderName' does not exist. Creating..."
+          $sqlScript = @"
+           DECLARE @folder_id BIGINT;
+          EXEC [catalog].[create_folder] @folder_name=N'Iviwe', @folder_id=@folder_id OUTPUT;
+          SELECT @folder_id;
+          EXEC [catalog].[set_folder_description] @folder_name=N'Iviwe', @folder_description=N'';
+          "@
             sqlcmd -S $sqlServer -d $catalogDB -Q $sqlScript -E
-             } else {
+              } else {
               Write-Output "Folder '$folderName' exists."
-              }
+                  }
+    
 
       - name: Deploy SSIS Project via stored procedure
         shell: powershell
