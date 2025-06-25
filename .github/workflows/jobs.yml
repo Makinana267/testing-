@@ -18,20 +18,21 @@ jobs:
         run: |
           :loop
           echo Executing SSIS Packages at %DATE% %TIME%
-
-          sqlcmd -S %SQL_SERVER_NAME% -d SSISDB -E -i "sql/execute_package.sql"
+          echo SQL Server Name: %SQL_SERVER_NAME%  :: Debug line to print variable
+          
+          sqlcmd -S "%SQL_SERVER_NAME%" -d SSISDB -E -i "sql/execute_package.sql"
           if %ERRORLEVEL% neq 0 (
             echo Failed to execute Package.dtsx
             exit /b %ERRORLEVEL%
           )
 
-          sqlcmd -S %SQL_SERVER_NAME% -d SSISDB -E -i "sql/execute_clients.sql"
+          sqlcmd -S "%SQL_SERVER_NAME%" -d SSISDB -E -i "sql/execute_clients.sql"
           if %ERRORLEVEL% neq 0 (
             echo Failed to execute Clients.dtsx
             exit /b %ERRORLEVEL%
           )
 
-          sqlcmd -S %SQL_SERVER_NAME% -d SSISDB -E -i "sql/execute_timesheetetl.sql"
+          sqlcmd -S "%SQL_SERVER_NAME%" -d SSISDB -E -i "sql/execute_timesheetetl.sql"
           if %ERRORLEVEL% neq 0 (
             echo Failed to execute TimesheetETL.dtsx
             exit /b %ERRORLEVEL%
