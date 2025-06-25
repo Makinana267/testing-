@@ -36,7 +36,7 @@ EXEC msdb.dbo.sp_add_jobstep
     @job_name = N'{jobName}',
     @step_name = N'Run SSIS Package',
     @subsystem = N'SSIS',
-    @command = N'/ISSERVER "\"\SSISDB\Iviwe\ProjectPackages\{jobName}\"" /SERVER "{dbServer}"',
+    @command = N'/ISSERVER "\"\SSISDB\Iviwe\ProjectSecondForLeave\{jobName}\"" /SERVER "{dbServer}"',
     @database_name = N'master',
     @on_success_action = 1,
     @on_fail_action = 2;
