@@ -1,7 +1,7 @@
 name: Run SSIS Packages Every 2 Minutes
 
 on:
-  workflow_dispatch:  # Manual trigger to start the loop
+  workflow_dispatch:
 
 jobs:
   run-ssis-packages:
@@ -12,29 +12,35 @@ jobs:
         uses: actions/checkout@v3
 
       - name: Loop and Execute SSIS Packages Every 2 Minutes
+        shell: powershell
         run: |
-          while true
-          do
-            echo "Executing SSIS Packages..."
+          while ($true) {
+              Write-Output "Executing SSIS Packages..."
 
-            sqlcmd -S YOUR_SQL_SERVER_NAME -d SSISDB -E -Q "DECLARE @execution_id BIGINT;
+              sqlcmd -S YOUR_SQL_SERVER_NAME -d SSISDB -E -Q @"
+              DECLARE @execution_id BIGINT;
               EXEC [SSISDB].[catalog].[create_execution] @package_name=N'Package.dtsx', @execution_id=@execution_id OUTPUT, @folder_name=N'Iviwe', @project_name=N'ProjectSecondForLeave', @use32bitruntime=0, @reference_id=NULL, @runinscaleout=0;
               DECLARE @var0 SMALLINT = 1;
               EXEC [SSISDB].[catalog].[set_execution_parameter_value] @execution_id, 50, N'LOGGING_LEVEL', @var0;
-              EXEC [SSISDB].[catalog].[start_execution] @execution_id;"
+              EXEC [SSISDB].[catalog].[start_execution] @execution_id;
+              "@
 
-            sqlcmd -S YOUR_SQL_SERVER_NAME -d SSISDB -E -Q "DECLARE @execution_id BIGINT;
+              sqlcmd -S YOUR_SQL_SERVER_NAME -d SSISDB -E -Q @"
+              DECLARE @execution_id BIGINT;
               EXEC [SSISDB].[catalog].[create_execution] @package_name=N'Clients.dtsx', @execution_id=@execution_id OUTPUT, @folder_name=N'Iviwe', @project_name=N'ProjectSecondForLeave', @use32bitruntime=0, @reference_id=NULL, @runinscaleout=0;
               DECLARE @var0 SMALLINT = 1;
               EXEC [SSISDB].[catalog].[set_execution_parameter_value] @execution_id, 50, N'LOGGING_LEVEL', @var0;
-              EXEC [SSISDB].[catalog].[start_execution] @execution_id;"
+              EXEC [SSISDB].[catalog].[start_execution] @execution_id;
+              "@
 
-            sqlcmd -S YOUR_SQL_SERVER_NAME -d SSISDB -E -Q "DECLARE @execution_id BIGINT;
+              sqlcmd -S YOUR_SQL_SERVER_NAME -d SSISDB -E -Q @"
+              DECLARE @execution_id BIGINT;
               EXEC [SSISDB].[catalog].[create_execution] @package_name=N'TimesheetETL.dtsx', @execution_id=@execution_id OUTPUT, @folder_name=N'Iviwe', @project_name=N'ProjectSecondForLeave', @use32bitruntime=0, @reference_id=NULL, @runinscaleout=0;
               DECLARE @var0 SMALLINT = 1;
               EXEC [SSISDB].[catalog].[set_execution_parameter_value] @execution_id, 50, N'LOGGING_LEVEL', @var0;
-              EXEC [SSISDB].[catalog].[start_execution] @execution_id;"
+              EXEC [SSISDB].[catalog].[start_execution] @execution_id;
+              "@
 
-            echo "Waiting 2 minutes before next run..."
-            sleep 120
-          done
+              Write-Output "Waiting 2 minutes before next run..."
+              Start-Sleep -Seconds 120
+          }
