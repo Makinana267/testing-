@@ -67,7 +67,7 @@ jobs:
         run: |
           $sqlServer = "LAPTOP-66HI94H2"
           $catalogDB = "SSISDB"
-          $folderName = "iviwe"
+          $folderName = 'iviwe'
           $folderExists = sqlcmd -S $sqlServer -d $catalogDB -Q "SELECT 1 FROM catalog.folders WHERE name = '$folderName'" -E -h -1
           if ([string]::IsNullOrEmpty($folderExists)) {
             Write-Output "Folder '$folderName' does not exist. Creating..."
@@ -82,7 +82,7 @@ jobs:
           $ispacPath = "${{ runner.temp }}\SSISOutput\Development\ProjectSecondForLeave.ispac"
           $sqlServer = "LAPTOP-66HI94H2"
           $catalogDB = "SSISDB"
-          $folderName = "iviwe"
+          $folderName = 'iviwe'
           $projectName = "ProjectSecondForLeave"
           Add-Type -AssemblyName System.Data
           Write-Output "Reading .ispac file from $ispacPath"
