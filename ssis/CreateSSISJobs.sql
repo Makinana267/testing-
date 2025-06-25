@@ -1,73 +1,67 @@
 -- =========================
--- Execute Package.dtsx
+-- Remove existing job if it exists
 -- =========================
-DECLARE @execution_id BIGINT;
-EXEC [SSISDB].[catalog].[create_execution]
-    @package_name = N'Package.dtsx',
-    @execution_id = @execution_id OUTPUT,
-    @folder_name = N'Iviwe',
-    @project_name = N'ProjectSecondForLeave',
-    @use32bitruntime = 0,
-    @reference_id = NULL,
-    @runinscaleout = 0;
+USE [msdb];
+GO
 
-SELECT @execution_id AS ExecutionID;
-
-EXEC [SSISDB].[catalog].[set_execution_parameter_value]
-    @execution_id = @execution_id,
-    @object_type = 50,
-    @parameter_name = N'LOGGING_LEVEL',
-    @parameter_value = 1;
-
-EXEC [SSISDB].[catalog].[start_execution] @execution_id;
+IF EXISTS (SELECT job_id FROM msdb.dbo.sysjobs WHERE name = N'{jobName}')
+BEGIN
+    EXEC msdb.dbo.sp_delete_job 
+        @job_name = N'{jobName}';
+END
 GO
 
 
 -- =========================
--- Execute Clients.dtsx
+-- Create SQL Agent Job: {jobName}
 -- =========================
-DECLARE @execution_id BIGINT;
-EXEC [SSISDB].[catalog].[create_execution]
-    @package_name = N'Clients.dtsx',
-    @execution_id = @execution_id OUTPUT,
-    @folder_name = N'Iviwe',
-    @project_name = N'ProjectSecondForLeave',
-    @use32bitruntime = 0,
-    @reference_id = NULL,
-    @runinscaleout = 0;
+DECLARE @jobId BINARY(16);
 
-SELECT @execution_id AS ExecutionID;
-
-EXEC [SSISDB].[catalog].[set_execution_parameter_value]
-    @execution_id = @execution_id,
-    @object_type = 50,
-    @parameter_name = N'LOGGING_LEVEL',
-    @parameter_value = 1;
-
-EXEC [SSISDB].[catalog].[start_execution] @execution_id;
+EXEC msdb.dbo.sp_add_job 
+    @job_name = N'{jobName}',
+    @enabled = 1,
+    @notify_level_eventlog = 2,
+    @delete_level = 0,
+    @description = N'Scheduled job to execute SSIS package {jobName} every 1 minute',
+    @category_name = N'[Uncategorized (Local)]',
+    @owner_login_name = N'{dbUser}', -- Replace with actual SQL login
+    @job_id = @jobId OUTPUT;
 GO
 
 
 -- =========================
--- Execute TimesheetETL.dtsx
+-- Add Job Step: Run SSIS Package
 -- =========================
-DECLARE @execution_id BIGINT;
-EXEC [SSISDB].[catalog].[create_execution]
-    @package_name = N'TimesheetETL.dtsx',
-    @execution_id = @execution_id OUTPUT,
-    @folder_name = N'Iviwe',
-    @project_name = N'ProjectSecondForLeave',
-    @use32bitruntime = 0,
-    @reference_id = NULL,
-    @runinscaleout = 0;
+EXEC msdb.dbo.sp_add_jobstep 
+    @job_name = N'{jobName}',
+    @step_name = N'Run SSIS Package',
+    @subsystem = N'SSIS',
+    @command = N'/ISSERVER "\"\SSISDB\Iviwe\ProjectPackages\{jobName}\"" /SERVER "{dbServer}"',
+    @database_name = N'master',
+    @on_success_action = 1,
+    @on_fail_action = 2;
+GO
 
-SELECT @execution_id AS ExecutionID;
 
-EXEC [SSISDB].[catalog].[set_execution_parameter_value]
-    @execution_id = @execution_id,
-    @object_type = 50,
-    @parameter_name = N'LOGGING_LEVEL',
-    @parameter_value = 1;
+-- =========================
+-- Add Job Schedule: Run every 1 minute
+-- =========================
+EXEC msdb.dbo.sp_add_jobschedule 
+    @job_name = N'{jobName}',
+    @name = N'RunEveryMinute',
+    @enabled = 1,
+    @freq_type = 4,           -- Daily
+    @freq_interval = 1,       -- Every day
+    @freq_subday_type = 4,    -- Minutes
+    @freq_subday_interval = 1,-- Every 1 minute
+    @active_start_time = 000000;
+GO
 
-EXEC [SSISDB].[catalog].[start_execution] @execution_id;
+
+-- =========================
+-- Attach Job to Local Server
+-- =========================
+EXEC msdb.dbo.sp_add_jobserver 
+    @job_name = N'{jobName}',
+    @server_name = N'(LOCAL)';
 GO
