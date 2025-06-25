@@ -13,12 +13,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v3
 
+      - name: Deploy SQL Server Agent Jobs
+        shell: cmd
+        run: |
+          echo Deploying SQL Server Agent Jobs at %DATE% %TIME%
+          echo SQL Server Name: %SQL_SERVER_NAME%  :: Debug line
+          sqlcmd -S "%SQL_SERVER_NAME%" -d msdb -E -i "sql/deploy_ssis_jobs.sql"
+          if %ERRORLEVEL% neq 0 (
+            echo Failed to deploy SQL Server Agent Jobs
+            exit /b %ERRORLEVEL%
+          )
+          echo SQL Server Agent Jobs deployed successfully
+
+      - name: Wait 5 Minutes Before Starting Execution Loop
+        shell: cmd
+        run: |
+          echo Waiting 5 minutes before starting SSIS package execution...
+          timeout /t 300 /nobreak
+
       - name: Loop and Execute SSIS Packages Every 2 Minutes
         shell: cmd
         run: |
           :loop
           echo Executing SSIS Packages at %DATE% %TIME%
-          echo SQL Server Name: %SQL_SERVER_NAME%  :: Debug line to print variable
+          echo SQL Server Name: %SQL_SERVER_NAME%  :: Debug line
           
           sqlcmd -S "%SQL_SERVER_NAME%" -d SSISDB -E -i "sql/execute_package.sql"
           if %ERRORLEVEL% neq 0 (
