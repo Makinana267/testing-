@@ -65,9 +65,9 @@ jobs:
       - name: Create SSIS Catalog Folder if missing
         shell: powershell
         run: |
-          $sqlServer = "SAMBE202519"
+          $sqlServer = "LAPTOP-66HI94H2"
           $catalogDB = "SSISDB"
-          $folderName = "ETL"
+          $folderName = "iviwe"
           $folderExists = sqlcmd -S $sqlServer -d $catalogDB -Q "SELECT 1 FROM catalog.folders WHERE name = '$folderName'" -E -h -1
           if ([string]::IsNullOrEmpty($folderExists)) {
             Write-Output "Folder '$folderName' does not exist. Creating..."
@@ -80,9 +80,9 @@ jobs:
         shell: powershell
         run: |
           $ispacPath = "${{ runner.temp }}\SSISOutput\Development\ProjectSecondForLeave.ispac"
-          $sqlServer = "SAMBE202519"
+          $sqlServer = "LAPTOP-66HI94H2"
           $catalogDB = "SSISDB"
-          $folderName = "ETL"
+          $folderName = "iviwe"
           $projectName = "ProjectSecondForLeave"
           Add-Type -AssemblyName System.Data
           Write-Output "Reading .ispac file from $ispacPath"
