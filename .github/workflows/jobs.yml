@@ -1,84 +1,40 @@
-name: Create SQL Agent Jobs for SSIS Packages
+name: Run SSIS Packages Every 2 Minutes
 
 on:
-  workflow_dispatch:
+  workflow_dispatch:  # Manual trigger to start the loop
 
 jobs:
-  create-ssis-jobs:
+  run-ssis-packages:
     runs-on: self-hosted
 
-    env:
-      SQL_SERVER: LAPTOP-66HI94H2
-      DEV_SQL_USER: 'Auto_user1'
-      DEV_SQL_PASSWORD: 'Iviwe@123'
-      JOB_NAME: 'TimesheetETL'           # Example SSIS package/job name
-      DB_USER: 'Auto_user1'
-      DB_SERVER: 'LAPTOP-66HI94H2'
-
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - name: Checkout repository
+        uses: actions/checkout@v3
 
-      - name: Generate SQL script with correct values
-        shell: powershell
+      - name: Loop and Execute SSIS Packages Every 2 Minutes
         run: |
-          $sqlContent = @"
-              USE [msdb];
-              GO
-              
-              IF EXISTS (SELECT job_id FROM msdb.dbo.sysjobs WHERE name = N'${{ env.JOB_NAME }}')
-              BEGIN
-                  EXEC msdb.dbo.sp_delete_job 
-                      @job_name = N'${{ env.JOB_NAME }}';
-              END
-              GO
-              
-              DECLARE @jobId BINARY(16);
-              
-              EXEC msdb.dbo.sp_add_job 
-                  @job_name = N'${{ env.JOB_NAME }}',
-                  @enabled = 1,
-                  @notify_level_eventlog = 2,
-                  @delete_level = 0,
-                  @description = N'Scheduled job to execute SSIS package ${{ env.JOB_NAME }} every 1 minute',
-                  @category_name = N'[Uncategorized (Local)]',
-                  @owner_login_name = N'${{ env.DB_USER }}',
-                  @job_id = @jobId OUTPUT;
-              GO
-              
-              EXEC msdb.dbo.sp_add_jobstep 
-                  @job_name = N'${{ env.JOB_NAME }}',
-                  @step_name = N'Run SSIS Package',
-                  @subsystem = N'SSIS',
-                  @command = N'/ISSERVER "\"\SSISDB\Iviwe\ProjectSecondForLeave\${{ env.JOB_NAME }}\"" /SERVER "${{ env.DB_SERVER }}"',
-                  @database_name = N'master',
-                  @on_success_action = 1,
-                  @on_fail_action = 2;
-              GO
-              
-              EXEC msdb.dbo.sp_add_jobschedule 
-                  @job_name = N'${{ env.JOB_NAME }}',
-                  @name = N'RunEveryMinute',
-                  @enabled = 1,
-                  @freq_type = 4,
-                  @freq_interval = 1,
-                  @freq_subday_type = 4,
-                  @freq_subday_interval = 1,
-                  @active_start_time = 000000;
-              GO
-              
-              EXEC msdb.dbo.sp_add_jobserver 
-                  @job_name = N'${{ env.JOB_NAME }}',
-                  @server_name = N'(LOCAL)';
-              GO
-              "@
+          while true
+          do
+            echo "Executing SSIS Packages..."
 
-          $sqlFilePath = "${{ github.workspace }}\ssis\CreateSSISJobsResolved.sql"
-          $sqlContent | Out-File -FilePath $sqlFilePath -Encoding UTF8
-          Write-Output "Generated SQL file at $sqlFilePath"
+            sqlcmd -S YOUR_SQL_SERVER_NAME -d SSISDB -E -Q "DECLARE @execution_id BIGINT;
+              EXEC [SSISDB].[catalog].[create_execution] @package_name=N'Package.dtsx', @execution_id=@execution_id OUTPUT, @folder_name=N'Iviwe', @project_name=N'ProjectSecondForLeave', @use32bitruntime=0, @reference_id=NULL, @runinscaleout=0;
+              DECLARE @var0 SMALLINT = 1;
+              EXEC [SSISDB].[catalog].[set_execution_parameter_value] @execution_id, 50, N'LOGGING_LEVEL', @var0;
+              EXEC [SSISDB].[catalog].[start_execution] @execution_id;"
 
-      - name: Execute SQL script
-        shell: powershell
-        run: |
-          $sqlFilePath = "${{ github.workspace }}\ssis\CreateSSISJobsResolved.sql"
-          sqlcmd -S "${{ env.SQL_SERVER }}" -U "${{ env.DEV_SQL_USER }}" -P "${{ env.DEV_SQL_PASSWORD }}" -i $sqlFilePath
+            sqlcmd -S YOUR_SQL_SERVER_NAME -d SSISDB -E -Q "DECLARE @execution_id BIGINT;
+              EXEC [SSISDB].[catalog].[create_execution] @package_name=N'Clients.dtsx', @execution_id=@execution_id OUTPUT, @folder_name=N'Iviwe', @project_name=N'ProjectSecondForLeave', @use32bitruntime=0, @reference_id=NULL, @runinscaleout=0;
+              DECLARE @var0 SMALLINT = 1;
+              EXEC [SSISDB].[catalog].[set_execution_parameter_value] @execution_id, 50, N'LOGGING_LEVEL', @var0;
+              EXEC [SSISDB].[catalog].[start_execution] @execution_id;"
+
+            sqlcmd -S YOUR_SQL_SERVER_NAME -d SSISDB -E -Q "DECLARE @execution_id BIGINT;
+              EXEC [SSISDB].[catalog].[create_execution] @package_name=N'TimesheetETL.dtsx', @execution_id=@execution_id OUTPUT, @folder_name=N'Iviwe', @project_name=N'ProjectSecondForLeave', @use32bitruntime=0, @reference_id=NULL, @runinscaleout=0;
+              DECLARE @var0 SMALLINT = 1;
+              EXEC [SSISDB].[catalog].[set_execution_parameter_value] @execution_id, 50, N'LOGGING_LEVEL', @var0;
+              EXEC [SSISDB].[catalog].[start_execution] @execution_id;"
+
+            echo "Waiting 2 minutes before next run..."
+            sleep 120
+          done
