@@ -8,36 +8,35 @@ jobs:
     runs-on: self-hosted
     env:
       SQL_SERVER_NAME: ${{ secrets.SQL_SERVER_NAME }}
-      SSISDB: SSISDB
-      FOLDER_NAME: Iviwe
-      PROJECT_NAME: ProjectSecondForLeave
 
     steps:
       - name: Checkout repository
         uses: actions/checkout@v3
 
       - name: Loop and Execute SSIS Packages Every 2 Minutes
-        shell: powershell
+        shell: cmd
         run: |
-          $packages = @("Package.dtsx", "Clients.dtsx", "TimesheetETL.dtsx")
-          while ($true) {
-              Write-Output "Starting SSIS package execution at $(Get-Date)"
-              foreach ($package in $packages) {
-                  try {
-                      Write-Output "Executing $package..."
-                      sqlcmd -S $env:SQL_SERVER_NAME -d $env:SSISDB -E -Q @"
-          DECLARE @execution_id BIGINT;
-          EXEC [SSISDB].[catalog].[create_execution] @package_name=N'$package', @execution_id=@execution_id OUTPUT, @folder_name=N'$env:FOLDER_NAME', @project_name=N'$env:PROJECT_NAME', @use32bitruntime=0, @reference_id=NULL, @runinscaleout=0;
-          DECLARE @var0 SMALLINT = 1;
-          EXEC [SSISDB].[catalog].[set_execution_parameter_value] @execution_id, 50, N'LOGGING_LEVEL', @var0;
-          EXEC [SSISDB].[catalog].[start_execution] @execution_id;
-          "@
-                      Write-Output "$package executed successfully."
-                  }
-                  catch {
-                      Write-Error "Failed to execute $package. Error: $_"
-                  }
-              }
-              Write-Output "Waiting 2 minutes before next run..."
-              Start-Sleep -Seconds 120
-          }
+          :loop
+          echo Executing SSIS Packages at %DATE% %TIME%
+
+          sqlcmd -S %SQL_SERVER_NAME% -d SSISDB -E -i "sql/execute_package.sql"
+          if %ERRORLEVEL% neq 0 (
+            echo Failed to execute Package.dtsx
+            exit /b %ERRORLEVEL%
+          )
+
+          sqlcmd -S %SQL_SERVER_NAME% -d SSISDB -E -i "sql/execute_clients.sql"
+          if %ERRORLEVEL% neq 0 (
+            echo Failed to execute Clients.dtsx
+            exit /b %ERRORLEVEL%
+          )
+
+          sqlcmd -S %SQL_SERVER_NAME% -d SSISDB -E -i "sql/execute_timesheetetl.sql"
+          if %ERRORLEVEL% neq 0 (
+            echo Failed to execute TimesheetETL.dtsx
+            exit /b %ERRORLEVEL%
+          )
+
+          echo Waiting 2 minutes before next run...
+          timeout /t 120 /nobreak
+          goto :loop
