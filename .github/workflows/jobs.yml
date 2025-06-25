@@ -1,0 +1,31 @@
+name: Create SQL Agent Jobs for SSIS Packages
+
+on:
+  workflow_dispatch:
+
+jobs:
+  create-ssis-jobs:
+    runs-on: self-hosted
+
+    env:
+      SQL_SERVER: LAPTOP-66HI94H2
+      DEV_SQL_USER: 'Auto_user1'             # Replace 'sa' with your actual SQL username
+      DEV_SQL_PASSWORD: 'Iviwe@123'  # Replace with your actual password
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Create SQL Agent Jobs for SSIS Packages
+        shell: powershell
+        run: |
+          $sqlFilePath = "${{ github.workspace }}\ssis\CreateSSISJobs.sql"
+          $sqlServer = "${env:SQL_SERVER}"
+          $sqlUser = "${env:DEV_SQL_USER}"
+          $sqlPassword = "${env:DEV_SQL_PASSWORD}"
+          if (-not (Test-Path $sqlFilePath)) {
+            Write-Error "SQL Job creation script not found at $sqlFilePath"
+            exit 1
+          }
+          Write-Output "Creating SQL Agent Jobs using $sqlFilePath"
+          sqlcmd -S $sqlServer -U $sqlUser -P $sqlPassword -i $sqlFilePath
