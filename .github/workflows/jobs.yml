@@ -25,37 +25,28 @@ jobs:
           )
           echo SQL Server Agent Jobs deployed successfully
 
-      - name: Wait 5 Minutes Before Starting Execution Loop
-        shell: cmd
-        run: |
-          echo Waiting 5 minutes before starting SSIS package execution...
-          timeout /t 300 /nobreak
-
       - name: Loop and Execute SSIS Packages Every 2 Minutes
         shell: cmd
         run: |
           :loop
           echo Executing SSIS Packages at %DATE% %TIME%
-          echo SQL Server Name: %SQL_SERVER_NAME%  :: Debug line
+          echo SQL Server Name: %SQL_SERVER_NAME%  :: Debug line to print variable
           
           sqlcmd -S "%SQL_SERVER_NAME%" -d SSISDB -E -i "sql/execute_package.sql"
           if %ERRORLEVEL% neq 0 (
             echo Failed to execute Package.dtsx
             exit /b %ERRORLEVEL%
           )
-
           sqlcmd -S "%SQL_SERVER_NAME%" -d SSISDB -E -i "sql/execute_clients.sql"
           if %ERRORLEVEL% neq 0 (
             echo Failed to execute Clients.dtsx
             exit /b %ERRORLEVEL%
           )
-
           sqlcmd -S "%SQL_SERVER_NAME%" -d SSISDB -E -i "sql/execute_timesheetetl.sql"
           if %ERRORLEVEL% neq 0 (
             echo Failed to execute TimesheetETL.dtsx
             exit /b %ERRORLEVEL%
           )
-
           echo Waiting 2 minutes before next run...
           timeout /t 120 /nobreak
-          goto :loop
+          goto ➰
