@@ -1,7 +1,7 @@
 -- Create Database
 IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'TestingTimsheet')
 BEGIN
-    CREATE DATABASE TestingTimsheet;
+    CREATE DATABASE TimsheetDB;
 END
 GO
 
@@ -159,13 +159,10 @@ GO
 IF OBJECT_ID('dbo.ErrorLog', 'U') IS NOT NULL
     DROP TABLE dbo.ErrorLog;
 GO
-CREATE TABLE ErrorLog (
-    ErrorLogID INT IDENTITY(1,1) PRIMARY KEY,
-    BatchID INT NOT NULL,
-    ErrorTimeUtc DATETIME2(7) NOT NULL CONSTRAINT DF_ErrorLog_ErrorTimeUtc DEFAULT (SYSUTCDATETIME()),
+CREATE TABLE dbo.ErrorLog (
+    ErrorLogID INT NOT NULL PRIMARY KEY,
+    ErrorTimeUtc DATETIME2(7) NOT NULL,
     ComponentName NVARCHAR(100) NOT NULL,
-    ErrorMessage NVARCHAR(MAX) NOT NULL,
-    RowKey NVARCHAR(200) NULL,
-    CONSTRAINT FK_ErrorLog_AuditLog_BatchID FOREIGN KEY (BatchID) REFERENCES AuditLog(AuditID)
+    ErrorMessage NVARCHAR(MAX) NOT NULL
 );
 GO
