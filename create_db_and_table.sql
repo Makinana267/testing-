@@ -1,11 +1,11 @@
 -- Create Database
-IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'TestingTimsheet')
+IF NOT EXISTS (SELECT name FROM sys.databases WHERE name = N'TimsheetDB')
 BEGIN
     CREATE DATABASE TimsheetDB;
 END
 GO
 
-USE TestingTimsheet;
+USE TimsheetDB;
 GO
 
 -- Create Employee Table
